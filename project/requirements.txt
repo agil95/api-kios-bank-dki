@@ -1,0 +1,14 @@
+requests
+uuid
+Flask
+flask-sqlalchemy 
+flask-login
+flask-serialize
+flask-cors
+PyMySQL
+python-escpos
+pyusb
+Pillow
+qrcode
+pyserial
+python-barcode

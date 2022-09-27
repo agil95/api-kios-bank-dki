@@ -1,0 +1,122 @@
+{% set page = 'destination' %} {% extends 'layouts/master.html' %} {% block
+plugins_css %} {% block title %} {{ data.pageTitle | safe }} {% endblock %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/jqvmap/jqvmap.min.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/owlcarousel2/owl.carousel.min.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/owlcarousel2/owl.theme.default.min.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/chocolat/chocolat.css') }}"
+/>
+{% endblock %} {% block page_css %}
+<style>
+  .section {
+    position: fixed;
+    top: 15%;
+    left: 12.5%;
+  }
+  .title-utama {
+    font-size: 60px;
+    font-weight: bold;
+  }
+  .btn.btn-icon .far,
+  .btn.btn-icon .fas {
+    font-size: 42px;
+  }
+  .btn-utama {
+    font-size: 42px;
+    padding: 3rem;
+    width: 100%;
+  }
+</style>
+{% endblock %} {% block content %}
+<section class="section">
+  <div>
+    <div class="row">
+      <h2 class="text-center text-white mb-5 title-utama">
+        {{ data.title | safe }}
+      </h2>
+    </div>
+    <div class="row">
+      <div class="col-12">
+        <div class="card" id="destination-form">
+          <form>
+            <div class="card-header">
+              <h4>Login</h4>
+            </div>
+            <div class="card-body pb-0">
+              <p class="text-muted">
+                Click login to change the card to progress mode.
+              </p>
+              <div class="form-group">
+                <label>Username</label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">
+                      <i class="fas fa-envelope"></i>
+                    </div>
+                  </div>
+                  <input type="text" class="form-control" placeholder="Email" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">
+                      <i class="fas fa-lock"></i>
+                    </div>
+                  </div>
+                  <input
+                    type="password"
+                    class="form-control"
+                    placeholder="Password"
+                  />
+                </div>
+              </div>
+              <div class="form-group mb-0">
+                <div class="custom-control custom-checkbox">
+                  <input
+                    type="checkbox"
+                    name="remember"
+                    class="custom-control-input"
+                    id="remember-me"
+                  />
+                  <label class="custom-control-label" for="remember-me"
+                    >Remember Me</label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="card-footer pt-">
+              <button
+                type="submit"
+                onclick="$.cardProgress('#destination-form', {dismiss: true, onDismiss: function() { alert('Gangguan pada server :(, \nSilahkan mencoba beberapa saat lagi.')}});return false;"
+                class="btn btn-primary btn-block"
+                id="action_button"
+              >
+                Login
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %} {% block plugins_js %}
+<script src="{{ url_for('static', filename='assets/modules/jquery.sparkline.min.js') }}"></script>
+<!-- <script src="{{ url_for('static', filename='assets/modules/chart.min.js') }}"></script> -->
+<script src="{{ url_for('static', filename='assets/modules/owlcarousel2/owl.carousel.min.js') }}"></script>
+<script src="{{ url_for('static', filename='assets/modules/chocolat/jquery.chocolat.min.js') }}"></script>
+{% endblock %} {% block page_js %}
+<script src="{{ url_for('static', filename='assets/js/page/custom.js') }}"></script>
+{% endblock %}

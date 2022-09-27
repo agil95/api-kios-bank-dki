@@ -1,0 +1,70 @@
+{% set page = 'index' %} {% extends 'layouts/master.html' %} {% block
+plugins_css %} {% block title %} {{ data.pageTitle | safe }} {% endblock %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/jqvmap/jqvmap.min.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/owlcarousel2/owl.carousel.min.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/modules/owlcarousel2/owl.theme.default.min.css') }}"
+/>
+{% endblock %} {% block page_css %}
+<style>
+  .section {
+    position: fixed;
+    top: 15%;
+    left: 12.5%;
+  }
+  .title-utama {
+    font-size: 60px;
+    font-weight: bold;
+  }
+  .btn.btn-icon .far,
+  .btn.btn-icon .fas {
+    font-size: 42px;
+  }
+  .btn-utama {
+    font-size: 42px;
+    padding: 3rem;
+    width: 100%;
+  }
+</style>
+{% endblock %} {% block content %}
+<section class="section">
+  <div>
+    <div class="row">
+      <h2 class="text-center text-white mb-5 title-utama">
+        {{ data.title | safe }}
+      </h2>
+    </div>
+    <div class="row mb-5 d-block text-center">
+      <img
+        src="{{ url_for('static', filename='assets/img/ship.png') }}"
+        height="256px"
+        class="img-responsive"
+      />
+    </div>
+    <div class="row" style="display: flex; flex-direction: column">
+      <a
+        href="{{ url_for('main.destination') }}"
+        class="btn btn-icon icon-left btn-warning btn-utama mb-3"
+        ><i class="fas fa-ticket-alt"></i> Tiket</a
+      >
+      <a href="#" class="btn btn-icon icon-left btn-info btn-utama mb-3"
+        ><i class="far fa-calendar-alt"></i> Daftar Tujuan</a
+      >
+    </div>
+  </div>
+</section>
+{% endblock %} {% block plugins_js %}
+<script src="{{ url_for('static', filename='assets/modules/jquery.sparkline.min.js') }}"></script>
+<!-- <script src="{{ url_for('static', filename='assets/modules/chart.min.js') }}"></script> -->
+<script src="{{ url_for('static', filename='assets/modules/owlcarousel2/owl.carousel.min.js') }}"></script>
+<script src="{{ url_for('static', filename='assets/modules/chocolat/jquery.chocolat.min.js') }}"></script>
+{% endblock %} {% block page_js %}
+<!-- <script src="{{ url_for('static', filename='assets/js/page/index.js') }}"></script> -->
+{% endblock %}
