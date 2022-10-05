@@ -12,3 +12,4 @@ Pillow
 qrcode
 pyserial
 python-barcode
+gunicorn

@@ -49,7 +49,7 @@ class LogUang(db.Model):
         }
 
 
-class LogTransaction(db.Model):
+class LogTicket(db.Model):
     # primary keys are required by SQLAlchemy
     id = db.Column(BIGINT(20, unsigned=True), primary_key=True)
     ref_number = db.Column(VARCHAR(255), nullable=False)
@@ -109,6 +109,47 @@ class LogTransaction(db.Model):
         }
 
 
+class LogPeron(db.Model):
+    # primary keys are required by SQLAlchemy
+    id = db.Column(BIGINT(20, unsigned=True), primary_key=True)
+    ref_number = db.Column(VARCHAR(255), nullable=False)
+    customer = db.Column(VARCHAR(100), nullable=False)
+    peron_price = db.Column(BIGINT(20))
+    quantity = db.Column(BIGINT(20))
+    total = db.Column(BIGINT(20))
+    status = db.Column(VARCHAR(255))
+    tickets_code = db.Column(TEXT, nullable=True)
+    money_changes = db.Column(BIGINT(20), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False,
+                          default=datetime.utcnow)
+
+    def __init__(self, ref_number, customer, peron_price, quantity, total, status, 
+                tickets_code, money_changes, created_at):
+        self.ref_number = ref_number
+        self.customer = customer
+        self.peron_price = peron_price
+        self.quantity = quantity
+        self.total = total
+        self.status = status
+        self.tickets_code = tickets_code
+        self.money_changes = money_changes
+        self.created_at = created_at
+
+    @property
+    def serialize(self):
+        return {
+            "ref_number": self.ref_number,
+            "customer": self.customer,
+            "peron_price": self.peron_price,
+            "quantity": self.quantity,
+            "total": self.total,
+            "status": self.status,
+            "tickets_code": self.tickets_code,
+            "money_changes": self.money_changes,
+            "created_at": self.created_at,
+        }
+
+        
 class Config(db.Model):
     # primary keys are required by SQLAlchemy
     id = db.Column(BIGINT(20, unsigned=True), primary_key=True)
@@ -164,4 +205,51 @@ class Config(db.Model):
             'status': self.status,
             'description': self.description,
             'created_at': self.created_at,
+        }
+
+
+class Pengaduan(db.Model):
+    # primary keys are required by SQLAlchemy
+    id = db.Column(BIGINT(20, unsigned=True), primary_key=True)
+    customer_id = db.Column(VARCHAR(255))
+    vm_id = db.Column(VARCHAR(255))
+    name = db.Column(VARCHAR(255))
+    ticket_price = db.Column(BIGINT(20), nullable=True)
+    money_accept = db.Column(BIGINT(20), nullable=True)
+    money_changes = db.Column(BIGINT(20), nullable=True)
+    answer_status = db.Column(ENUM("PENDING", "COMPLETE"))
+    description = db.Column(TEXT, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False,
+                           default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False,
+                           default=datetime.utcnow)
+
+
+    def __init__(self, customer_id, vm_id, name, ticket_price, money_accept, money_changes, 
+                answer_status, description, created_at, updated_at):
+        self.customer_id = customer_id
+        self.vm_id = vm_id
+        self.name = name
+        self.ticket_price = ticket_price
+        self.money_accept = money_accept
+        self.money_changes = money_changes
+        self.answer_status = answer_status
+        self.description = description
+        self.created_at = created_at
+        self.updated_at = updated_at
+
+    @property
+    def serialize(self):
+        """Return object data in serializeable format"""
+        return {
+            'customer_id': self.customer_id, 
+            'vm_id': self.vm_id,
+            'name': self.name,
+            'ticket_price': self.ticket_price,
+            'money_accept': self.money_accept,
+            'money_changes': self.money_changes,
+            'answer_status': self.answer_status,
+            'description': self.description,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at
         }

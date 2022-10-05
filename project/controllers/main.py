@@ -13,17 +13,19 @@ main = Blueprint('main', __name__)
 @main.route('/index')
 @main.route('/')
 def index():
-    data = {
-        'pageTitle': 'Home',
-        'title': 'Selamat Datang di Kios'
-    }
-    return render_template('index.html', data=data)
+    # data = {
+    #     'pageTitle': 'Home',
+    #     'title': 'Selamat Datang di Kios'
+    # }
+    # return render_template('index.html', data=data)
+    return render_template('404.html')
 
 
 @main.route('/destination')
 def destination():
-    data = {
-        'pageTitle': 'Pilih Tujuan',
-        'title': 'Tiket Kapal'
-    }
-    return render_template('pages/destination.html', data=data)
+    # data = {
+    #     'pageTitle': 'Pilih Tujuan',
+    #     'title': 'Tiket Kapal'
+    # }
+    # return render_template('pages/destination.html', data=data)
+    return render_template('404.html')
