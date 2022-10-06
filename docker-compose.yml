@@ -6,8 +6,9 @@ services:
       - db
     ports:
       - "5000:5000"
-    container_name: kios-engine
+    container_name: flask-app
     restart: unless-stopped
+    image: agil95/kios-engine:1.0.0
 
   db:
     image: mysql:5.7
