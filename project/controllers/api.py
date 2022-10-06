@@ -1,12 +1,9 @@
-from crypt import methods
-from dataclasses import dataclass
 from flask import Blueprint, render_template, request, jsonify
 from flask_cors import cross_origin
 from sqlalchemy import Date, cast
 from datetime import datetime, timedelta
 from project.models import LogUang, LogTicket, LogPeron, Config, Pengaduan
 from project import db
-from project.dll.MTKF31_dll import MTKF31Command, MTKF31Status
 from escpos.printer import Usb
 from time import sleep
 
@@ -22,7 +19,7 @@ import os
 
 api = Blueprint('api', __name__, url_prefix='/api')
 img_dir = './project/static/assets/img/'
-logo_header = os.path.join(img_dir, 'logo-bank-header.jpg')
+logo_header = os.path.join(img_dir, 'logo-header.png')
 logo_bank_dki = os.path.join(img_dir, 'logo-bank-dki-res.jpeg')
 logo_kaliadem = os.path.join(img_dir, 'logo-kaliadem.jpeg') 
 
@@ -116,6 +113,8 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
         p.open()
         p.initialize()
         # p.leftMargin(leftMargin=100)
+        p.image(logo_header)
+        p.lf()
         p.set(align="center", font='a', text_type='B', width=2, height=2)
         p.text('Jaket Boat')
         p.lf()
@@ -192,7 +191,8 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
         for code in ticketscode:
             p.initialize()
             # p.leftMargin(leftMargin=100)
-            p.image(logo_bank_dki, high_density_vertical=True, high_density_horizontal=True, impl='bitImageRaster', fragment_height=960, center=False)
+            p.image(logo_header)
+            p.lf()
             p.set(align="center", font='a', text_type='B', width=2, height=2)
             p.text('Jaket Boat')
             p.lf()
@@ -203,7 +203,7 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
             p.lf()
             p.lf()
             p.set(align="center", font='a', text_type='B')
-            p.text('Peron')
+            p.text('----- Peron -----')
             p.lf()
             # p.text('=======================================')
             # p.tabPositions([3, 24])
@@ -271,6 +271,8 @@ def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketpri
         p = Usb(idVendor=idvendor, idProduct=idproduct, timeout=0, in_ep=0x81, out_ep=0x03)
         p.open()
         p.initialize()
+        p.image(logo_header)
+        p.lf()
         p.leftMargin(leftMargin=50)
         p.set(align="left", font='a', text_type='B', width=2, height=2)
         p.text('Jaket Boat')
