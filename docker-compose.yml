@@ -19,5 +19,6 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: kios_pelabuhan
     volumes:
-      - ./db:/docker-entrypoint-initdb.d/init.sql
+      - ./db/kios_pelabuhan.sql:/docker-entrypoint-initdb.d/kios_pelabuhan.sql:ro
