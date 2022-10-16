@@ -10,6 +10,7 @@ from time import sleep
 import usb.core
 import usb.util
 import json
+import requests
 import serial
 import codecs
 import subprocess
@@ -21,7 +22,8 @@ api = Blueprint('api', __name__, url_prefix='/api')
 img_dir = './project/static/assets/img/'
 logo_header = os.path.join(img_dir, 'logo-header.png')
 logo_bank_dki = os.path.join(img_dir, 'logo-bank-dki-res.jpeg')
-logo_kaliadem = os.path.join(img_dir, 'logo-kaliadem.jpeg') 
+logo_kaliadem = os.path.join(img_dir, 'logo-kaliadem.jpeg')
+PAYMENT_BASEURL = 'http://103.145.203.142'
 
 
 def device_io(port, baudrate, stopbits, timeout):
@@ -35,7 +37,7 @@ def device_io(port, baudrate, stopbits, timeout):
     )
     return ser
 
-    
+
 def response_io(result, info):
     if ser.is_open:
         original = codecs.encode(result, 'hex').decode().upper()
@@ -49,7 +51,8 @@ def response_io(result, info):
 
 
 def vendor_product():
-    device_re = re.compile(b"Bus\s+(?P<bus>\d+)\s+Device\s+(?P<device>\d+).+ID\s(?P<id>\w+:\w+)\s(?P<tag>.+)$", re.I)
+    device_re = re.compile(
+        b"Bus\s+(?P<bus>\d+)\s+Device\s+(?P<device>\d+).+ID\s(?P<id>\w+:\w+)\s(?P<tag>.+)$", re.I)
     df = subprocess.check_output("lsusb")
     devices = []
     for i in df.split(b'\n'):
@@ -57,9 +60,10 @@ def vendor_product():
             info = device_re.match(i)
             if info:
                 dinfo = info.groupdict()
-                dinfo['device'] = '/dev/bus/usb/%s/%s' % (dinfo.pop('bus'), dinfo.pop('device'))
+                dinfo['device'] = '/dev/bus/usb/%s/%s' % (
+                    dinfo.pop('bus'), dinfo.pop('device'))
                 devices.append(dinfo)
-            
+
     return devices
 
 
@@ -73,9 +77,28 @@ def format_rupiah(uang):
         return format_rupiah(q) + '.' + p
 
 
+def post_api(type, endpoint, formdata):
+    global req, res
+    try:
+        if type == 'POST':
+            req = requests.post(url=endpoint, data=formdata)
+        elif type == 'GET':
+            req = requests.get(url=endpoint)
+    except Exception as e:
+        return e
+
+    try:
+        res = req.json()
+        return res
+
+    except Exception as e:
+        return e
+
+
 def test_print_struk(idvendor, idproduct, image):
     try:
-        p = Usb(idVendor=idvendor, idProduct=idproduct, timeout=0, in_ep=0x81, out_ep=0x03)
+        p = Usb(idVendor=idvendor, idProduct=idproduct,
+                timeout=0, in_ep=0x81, out_ep=0x03)
         p.open()
         p.initialize()
         # p.leftMargin(leftMargin=100)
@@ -88,7 +111,7 @@ def test_print_struk(idvendor, idproduct, image):
         return str(e)
 
 
-def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransaction, penumpang, ticketprice, kapal, vmid):
+def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransaction, penumpang, ticketprice, kapal, vmid, paymentmethod):
     waktu = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     # save to db
     # store_data(idtransaction, typetransaction, cardname, waktu, cardprice)
@@ -102,14 +125,17 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
     print("|    ==================================   |")
     print("|    Kode          :  #{}            |".format(idtransaction))
     print("|    Berangkat     :  {}             |".format(berangkat))
-    print("|    Harga         :  Rp.{}            |".format(format_rupiah(str(ticketprice))))
+    print("|    Metode Bayar  :  {}             |".format(paymentmethod))
+    print("|    Harga         :  Rp.{}            |".format(
+        format_rupiah(str(ticketprice))))
     print("|                                         |")
     print("|    Kapal {}                   |".format(kapal))
     print("|    VM Id         : {}         |".format(vmid))
     print("|─────────────────────────────────────────|")
-  
+
     try:
-        p = Usb(idVendor=idvendor, idProduct=idproduct, timeout=0, in_ep=0x81, out_ep=0x03)
+        p = Usb(idVendor=idvendor, idProduct=idproduct,
+                timeout=0, in_ep=0x81, out_ep=0x03)
         p.open()
         p.initialize()
         # p.leftMargin(leftMargin=100)
@@ -141,6 +167,10 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
         p.tab()
         p.text(berangkat)
         p.lf()
+        p.text('\tMetode Bayar')
+        p.tab()
+        p.text(paymentmethod)
+        p.lf()
         p.text('\tHarga')
         p.tab()
         p.tab()
@@ -166,7 +196,7 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
         return str(e)
 
 
-def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total, ticketscode, createdat, vmid):
+def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total, ticketscode, createdat, vmid, paymentmethod):
     global p
     waktu = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     # ready to print
@@ -179,14 +209,17 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
     print("|    ==================================   |")
     print("|    Kode          :  #{}            |".format(ticketscode[0]))
     print("|    Tanggal       :  {}             |".format(createdat))
-    print("|    Harga         :  Rp.{}            |".format(format_rupiah(str(peronprice))))
+    print("|    Metode Bayar  :  {}             |".format(paymentmethod))
+    print("|    Harga         :  Rp.{}            |".format(
+        format_rupiah(str(peronprice))))
     print("|                                         |")
     print("|                                         |")
     print("|    VM Id         : {}         |".format(vmid))
     print("|─────────────────────────────────────────|")
-   
+
     try:
-        p = Usb(idVendor=idvendor, idProduct=idproduct, timeout=0, in_ep=0x81, out_ep=0x03)
+        p = Usb(idVendor=idvendor, idProduct=idproduct,
+                timeout=0, in_ep=0x81, out_ep=0x03)
         p.open()
         for code in ticketscode:
             p.initialize()
@@ -219,6 +252,11 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
             p.tab()
             p.text(createdat)
             p.lf()
+            p.text('\tMetode Bayar')
+            p.tab()
+            p.tab()
+            p.text(paymentmethod)
+            p.lf()
             p.text('\tHarga')
             p.tab()
             p.tab()
@@ -243,8 +281,8 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
         return str(e)
 
 
-def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketprice, moneyaccept, moneychanges, 
-                           description):
+def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketprice, moneyaccept, moneychanges,
+                          description):
     waktu = datetime.now().strftime("%d/%m/%Y %H:%M")
     # ready to print
     print("|──────────────────────────────────────────────|")
@@ -256,10 +294,13 @@ def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketpri
     print("|    ======================================    |")
     print("|    Kode Pelanggan        :  {}               |".format(customerid))
     print("|    Nama Lengkap          :  {}               |".format(name))
-    print("|    Harga Tiket           :  Rp.{}            |".format(format_rupiah(str(ticketprice))))
-    print("|    Total Uang Masuk      :  Rp.{}            |".format(format_rupiah(str(moneyaccept))))
+    print("|    Harga Tiket           :  Rp.{}            |".format(
+        format_rupiah(str(ticketprice))))
+    print("|    Total Uang Masuk      :  Rp.{}            |".format(
+        format_rupiah(str(moneyaccept))))
     print("|                          ----------------    |")
-    print("|    Total Uang Kembalian  :  Rp.{}            |".format(format_rupiah(str(moneychanges))))
+    print("|    Total Uang Kembalian  :  Rp.{}            |".format(
+        format_rupiah(str(moneychanges))))
     print("|                                              |")
     print("|    Keterangan                                |")
     print("|    ======================================    |")
@@ -268,7 +309,8 @@ def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketpri
     print("|    VM ID: {} | {}                            |".format(vmid, waktu))
     print("|──────────────────────────────────────────────|")
     try:
-        p = Usb(idVendor=idvendor, idProduct=idproduct, timeout=0, in_ep=0x81, out_ep=0x03)
+        p = Usb(idVendor=idvendor, idProduct=idproduct,
+                timeout=0, in_ep=0x81, out_ep=0x03)
         p.open()
         p.initialize()
         p.image(logo_header)
@@ -351,8 +393,8 @@ def insert_log_money(money, customerId):
         verify_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         description = "Uang Masuk"
         new_log = LogUang(id=0, customer=customerId, income=money,
-                        status=status, verify_at=verify_at,
-                        description=description)
+                          status=status, verify_at=verify_at,
+                          description=description)
         db.session.add(new_log)
         db.session.commit()
         print("[INFO] Success insert money log!")
@@ -367,48 +409,50 @@ def delete_log_money():
     print("[INFO] Successfully delete money log!")
 
 
-def insert_log_ticket(ref_number, booking_code, passanger_code, passanger, origin, departure_at, destination, 
-                    arrive_at, status, price, money_changes, description, paid_at, ticket_type):
+def insert_log_ticket(ref_number, booking_code, passanger_code, passanger, origin, departure_at, destination,
+                      arrive_at, status, price, money_changes, description, paid_at, ticket_type, payment_method):
     try:
         new_log = LogTicket(id=0, ref_number=ref_number, booking_code=booking_code,
-                                passanger_code=passanger_code, passanger=passanger, 
-                                origin=origin, departure_at=departure_at, 
-                                destination=destination, arrive_at=arrive_at,
-                                status=status, price=price, money_changes=money_changes, 
-                                description=description, paid_at=paid_at, ticket_type=ticket_type)
+                            passanger_code=passanger_code, passanger=passanger,
+                            origin=origin, departure_at=departure_at,
+                            destination=destination, arrive_at=arrive_at,
+                            status=status, price=price, money_changes=money_changes,
+                            description=description, paid_at=paid_at, ticket_type=ticket_type,
+                            payment_method=payment_method)
         db.session.add(new_log)
-        db.session.commit()      
+        db.session.commit()
         print("[INFO] Success insert ticket log!")
 
     except Exception as e:
         print(f"[INFO] Failed insert ticket log -> {str(e)}")
 
 
-def insert_log_peron(ref_number, customer, peron_price, quantity, total, status, tickets_code, 
-                     money_changes, created_at):
+def insert_log_peron(ref_number, customer, peron_price, quantity, total, status, tickets_code,
+                     money_changes, payment_method, created_at):
     try:
         new_log = LogPeron(ref_number=ref_number, customer=customer,
-                            peron_price=peron_price, quantity=quantity, 
-                            total=total, status=status, 
-                            tickets_code=tickets_code, money_changes=money_changes, 
-                            created_at=created_at)
+                           peron_price=peron_price, quantity=quantity,
+                           total=total, status=status,
+                           tickets_code=tickets_code, money_changes=money_changes,
+                           payment_method=payment_method, created_at=created_at)
         db.session.add(new_log)
-        db.session.commit()      
+        db.session.commit()
         print("[INFO] Success insert peron log!")
 
     except Exception as e:
         print(f"[INFO] Failed insert peron log -> {str(e)}")
 
 
-def insert_pengaduan(customer_id, vm_id, name, ticket_price, money_accept, money_changes, answer_status,
-                    description, created_at, updated_at):
+def insert_pengaduan(customer_id, vm_id, name, ticket_price, money_accept, money_changes, payment_method, answer_status,
+                     description, created_at, updated_at):
     try:
         new_pengaduan = Pengaduan(customer_id=customer_id, vm_id=vm_id, name=name,
-                                ticket_price=ticket_price, money_accept=money_accept, 
-                                money_changes=money_changes, answer_status=answer_status,                             
-                                description=description, created_at=created_at, updated_at=updated_at)
+                                  ticket_price=ticket_price, money_accept=money_accept,
+                                  payment_method=payment_method, money_changes=money_changes,
+                                  answer_status=answer_status, description=description,
+                                  created_at=created_at, updated_at=updated_at)
         db.session.add(new_pengaduan)
-        db.session.commit()      
+        db.session.commit()
         print("[INFO] Success insert pengaduan!")
 
     except Exception as e:
@@ -421,7 +465,7 @@ def cancel_money_validator():
     cmdHostProtocolVersion7 = bytes.fromhex("7F 80 02 06 07 21 94")
     cmdDisable = bytes.fromhex("7F 80 01 09 35 82")
     ser = device_io(port='/dev/ttyUSB0', baudrate=9600,
-                   stopbits=serial.STOPBITS_TWO, timeout=1)
+                    stopbits=serial.STOPBITS_TWO, timeout=1)
     if ser.is_open:
         ser.write(cmdSync)
         sleep(0.5)
@@ -436,6 +480,7 @@ def cancel_money_validator():
         return False
 
 # ============================================================================================================== #
+
 
 @api.route('/test', methods=['POST'])
 def test():
@@ -524,7 +569,7 @@ def money_validator():
     # pass
 
     ser = device_io(port='/dev/ttyUSB0', baudrate=9600,
-                   stopbits=serial.STOPBITS_TWO, timeout=1)
+                    stopbits=serial.STOPBITS_TWO, timeout=1)
 
     if ser.is_open:
         print("[INFO] Bill validator is Open!")
@@ -663,7 +708,8 @@ def money_validator():
                         elif value_one[5] == "01":
                             currValue = 1000
                             tempValue.append(currValue)
-                        insert_log_money(money=currValue, customerId=customerId)
+                        insert_log_money(
+                            money=currValue, customerId=customerId)
                         print('[INFO] cash detect : {}'.format(currValue))
                         print('[INFO] temp cash -> {}'.format(tempValue))
                         totalValue += currValue
@@ -745,11 +791,12 @@ def money_validator():
                             tempValue.append(currValue)
                         elif value_two[5] == "02":
                             currValue = 2000
-                            tempValue.append(currValue)                                                                   
+                            tempValue.append(currValue)
                         elif value_two[5] == "01":
                             currValue = 1000
                             tempValue.append(currValue)
-                        insert_log_money(money=currValue, customerId=customerId)
+                        insert_log_money(
+                            money=currValue, customerId=customerId)
                         print('[INFO] cash detect : {} IDR'.format(currValue))
                         print('[INFO] temp cash -> {}'.format(tempValue))
                         totalValue += currValue
@@ -890,7 +937,7 @@ def money_validator():
         ser.flush()
         ser.close()
         response_data = {"moneys": tempValue, "money_changes": moneyChanges}
-        
+
         # del tempValue[:]
         # self.signalTransaction.emit('Success')
         return jsonify({'success': True, "message": "Successfully ticket purchased!", "data": response_data}), 200
@@ -957,14 +1004,17 @@ def print_ticket():
     vmId = request.get_json().get('vm_id')
     adminFee = request.get_json().get('admin_fee')
     ticketPrice = request.get_json().get('ticket_price')
-    result = print_struk_ticket(idvendor=idVendor, idproduct=idProduct, idtransaction=passengerCode, 
-                        berangkat=str(departure).replace('-', '/'), typetransaction="Buy", penumpang=passengerName, 
-                        ticketprice=price, kapal=ship, vmid=vmId)
-    insert_log_ticket(ref_number=refNumber, booking_code=bookingCode, passanger_code=passengerCode, 
-                        passanger=passengerName, origin=origin, departure_at=datetime.strptime(departureAt,  "%d-%m-%Y %H:%M"),
-                        destination=destination, arrive_at=datetime.strptime(arriveAt,  "%d-%m-%Y %H:%M"), status=status, price=price, 
-                        money_changes=moneyChanges, description=description, paid_at=datetime.strptime(paidAt,  "%d-%m-%Y %H:%M"),
-                        ticket_type=ticketType)
+    paymentMethod = request.get_json().get('payment_method')
+    result = print_struk_ticket(idvendor=idVendor, idproduct=idProduct, idtransaction=passengerCode,
+                                berangkat=str(departure).replace('-', '/'), typetransaction="Buy", penumpang=passengerName,
+                                ticketprice=price, kapal=ship, vmid=vmId, paymentmethod=paymentMethod)
+    insert_log_ticket(ref_number=refNumber, booking_code=bookingCode, passanger_code=passengerCode,
+                      passanger=passengerName, origin=origin, departure_at=datetime.strptime(
+                          departureAt,  "%d-%m-%Y %H:%M"),
+                      destination=destination, arrive_at=datetime.strptime(arriveAt,  "%d-%m-%Y %H:%M"), status=status, price=price,
+                      money_changes=moneyChanges, description=description, paid_at=datetime.strptime(
+                          paidAt,  "%d-%m-%Y %H:%M"),
+                      ticket_type=ticketType, payment_method=paymentMethod)
     if result == 'Ok':
         return jsonify({'success': True, 'message': 'Berhasil cetak tiket :)'}), 200
     else:
@@ -986,12 +1036,13 @@ def print_ticket_peron():
     ticketsCode = request.get_json().get('tickets_code')
     createdAt = request.get_json().get('created_at')
     moneyChanges = request.get_json().get('money_changes')
-    result = print_struk_peron(idvendor=idVendor, idproduct=idProduct, customer=customerId, peronprice=peronPrice, 
-                                quantity=quantity, total=totalAmount, ticketscode=ticketsCode, 
-                                createdat=str(createdAt).replace('-', '/'), vmid=vmId)
-    insert_log_peron(ref_number=refNumber, customer=customerId, peron_price=peronPrice, quantity=quantity, total=totalAmount, 
-                    status=status, tickets_code=ticketsCode, money_changes=moneyChanges, 
-                    created_at=datetime.strptime(createdAt,  "%d-%m-%Y %H:%M"))
+    paymentMethod = request.get_json().get('payment_method')
+    result = print_struk_peron(idvendor=idVendor, idproduct=idProduct, customer=customerId, peronprice=peronPrice,
+                               quantity=quantity, total=totalAmount, ticketscode=ticketsCode,
+                               createdat=str(createdAt).replace('-', '/'), vmid=vmId, paymentmethod=paymentMethod)
+    insert_log_peron(ref_number=refNumber, customer=customerId, peron_price=peronPrice, quantity=quantity, total=totalAmount,
+                     status=status, tickets_code=ticketsCode, money_changes=moneyChanges, payment_method=paymentMethod,
+                     created_at=datetime.strptime(createdAt,  "%d-%m-%Y %H:%M"))
 
     if result == 'Ok':
         return jsonify({'success': True, 'message': 'Berhasil cetak tiket peron :)'}), 200
@@ -1012,12 +1063,13 @@ def complaint():
     moneyChanges = request.get_json().get('money_changes')
     description = request.get_json().get('description')
     time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    result = print_struk_pengaduan(idvendor=idVendor, idproduct=idProduct, customerid=str(customerId).upper(), vmid=vmId, name=name, 
-                                    ticketprice=ticketPrice, moneyaccept=moneyAccept, moneychanges=moneyChanges, 
-                                    description=description)
-    insert_pengaduan(customer_id=str(customerId).upper(), vm_id=vmId, name=name, ticket_price=ticketPrice, money_accept=moneyAccept, 
-                    money_changes=moneyChanges, answer_status="PENDING", description=description, created_at=time, 
-                    updated_at=time)
+    paymentMethod = request.get_json().get('payment_method')
+    result = print_struk_pengaduan(idvendor=idVendor, idproduct=idProduct, customerid=str(customerId).upper(), vmid=vmId, name=name,
+                                   ticketprice=ticketPrice, moneyaccept=moneyAccept, moneychanges=moneyChanges, payment_method=paymentMethod,
+                                   description=description)
+    insert_pengaduan(customer_id=str(customerId).upper(), vm_id=vmId, name=name, ticket_price=ticketPrice, money_accept=moneyAccept,
+                     money_changes=moneyChanges, payment_method=paymentMethod, answer_status="PENDING", description=description, created_at=time,
+                     updated_at=time)
     if result == 'Ok':
         return jsonify({'success': True, 'message': 'Berhasil cetak tiket pengaduan :)'}), 200
     else:
@@ -1031,7 +1083,7 @@ def power_off():
 
     try:
         p = subprocess.Popen(['sudo', '-S'] + command, stdin=subprocess.PIPE, stderr=subprocess.PIPE,
-                universal_newlines=True)
+                             universal_newlines=True)
         sudo_prompt = p.communicate(sudo_password + '\n')[1]
         return jsonify({'success': True, 'message': 'System is shutting down...'}), 200
     except Exception as e:
@@ -1042,10 +1094,10 @@ def power_off():
 def restart():
     sudo_password = '123456'
     command = 'reboot'.split()
-    
+
     try:
         p = subprocess.Popen(['sudo', '-S'] + command, stdin=subprocess.PIPE, stderr=subprocess.PIPE,
-                universal_newlines=True)
+                             universal_newlines=True)
         sudo_prompt = p.communicate(sudo_password + '\n')[1]
         return jsonify({'success': True, 'message': 'System is restarting...'}), 200
     except Exception as e:
@@ -1057,9 +1109,99 @@ def test_print():
     data = ["0x0519", "0x2013"]
     idVendor = int(data[0], 16)
     idProduct = int(data[1], 16)
-    
-    test = test_print_struk(idvendor=idVendor, idproduct=idProduct, image=logo_header)
+
+    test = test_print_struk(
+        idvendor=idVendor, idproduct=idProduct, image=logo_header)
     if test == 'Ok':
         return jsonify({'success': True, 'message': 'test print ok'}), 200
     else:
         return jsonify({'success': False, 'message': test}), 500
+
+
+@api.route('/payment', methods=['POST'])
+def payment():
+    paymentMethod = request.get_json().get('payment_method')
+
+    # ---------------------------------------------------------
+    # PAYMENT METHOD LIST
+    # ---------------------------------------------------------
+    # QRIS, VA (BANK DKI), CASH
+    # ---------------------------------------------------------
+    if paymentMethod == 'QRIS':
+        merchantId = request.get_json().get('merchant_id')
+        merchantRef = request.get_json().get('merchant_ref')
+        amount = request.get_json().get('amount')
+        notifUrl = request.get_json().get('notif_url')
+        expiredParameter = request.get_json().get('expired_parameter')
+        form_data = {
+            'merchant_id': merchantId,
+            'merchant_ref': merchantRef,
+            'amount': amount,
+            'notif_url': notifUrl,
+            'expired_parameter': expiredParameter
+        }
+
+        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
+                                '/qrisdkipelabuhan-prod/index.php/v1/transaksi/createqr', formdata=form_data)
+        if response['status'] == True:
+            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
+        elif response['status'] == False:
+            return jsonify({'success': False, 'message': response['message']}), 500
+        else:
+            return jsonify({'success': False, 'message': response}), 500
+
+    elif paymentMethod == 'VA':
+        merchantId = request.get_json().get('merchant_id')
+        amount = request.get_json().get('amount')
+        notifUrl = request.get_json().get('notif_url')
+        expiredParameter = request.get_json().get('expired_parameter')
+        form_data = {
+            'merchant_id': merchantId,
+            'amount': amount,
+            'notif_url': notifUrl,
+            'expired_parameter': expiredParameter
+        }
+
+        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
+                                '/vadkipelabuhan-prod/index.php/v1/transaksi/createbilling', formdata=form_data)
+        if response['status'] == True:
+            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
+        elif response['status'] == False:
+            return jsonify({'success': False, 'message': response['message']}), 500
+        else:
+            return jsonify({'success': False, 'message': response}), 500
+
+    else:
+        return jsonify({'success': False, 'message': 'Metode pembayaran yang support hanya: QRIS, VA (DKI)'}), 200
+
+
+@api.route('/payment_check', methods=['POST'])
+def payment_check():
+    paymentMethod = request.get_json().get('payment_method')
+
+    # ---------------------------------------------------------
+    # PAYMENT METHOD LIST
+    # ---------------------------------------------------------
+    # QRIS, VA (BANK DKI), CASH
+    # ---------------------------------------------------------
+    if paymentMethod == 'QRIS':
+        invoiceId = request.get_json().get('invoice_id')
+        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
+                                '/qrisdkipelabuhan-prod/index.php/v1/transaksi/cekstatuslocal', data={'invoiceid': invoiceId})
+        if response['status'] == True:
+            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
+        elif response['status'] == False:
+            return jsonify({'success': False, 'message': response['message']}), 500
+        else:
+            return jsonify({'success': False, 'message': response}), 500
+
+    elif paymentMethod == 'VA':
+        idTagihan = request.get_json().get('id_tagihan')
+        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
+                                '/vadkipelabuhan-prod/index.php/v1/transaksi/cekstatuslocal', data={'id_tagihan': idTagihan})
+        if response['status'] == True:
+            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
+        elif response['status'] == False:
+            return jsonify({'success': False, 'message': response['message']}), 500
+        else:
+            return jsonify({'success': False, 'message': response}), 500

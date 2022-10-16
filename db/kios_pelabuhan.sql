@@ -65,9 +65,10 @@ CREATE TABLE `log_peron` (
   `status` varchar(255) DEFAULT NULL,
   `tickets_code` text DEFAULT NULL,
   `money_changes` bigint(20) DEFAULT NULL,
+  `payment_method` varchar(255) DEFAULT NULL,
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -76,7 +77,6 @@ CREATE TABLE `log_peron` (
 
 LOCK TABLES `log_peron` WRITE;
 /*!40000 ALTER TABLE `log_peron` DISABLE KEYS */;
-INSERT INTO `log_peron` VALUES (1,'731D3FF','Wq2zbNxt',1000,1,1000,NULL,'F731EEA7',NULL,'2022-10-05 10:52:00'),(2,'0BCF79A','MYlzUNTz',1000,1,1000,NULL,'60BD1709',NULL,'2022-10-05 11:20:00'),(3,'240EF89','RZYXId4H',1000,1,1000,NULL,'22410008',NULL,'2022-10-05 13:20:00'),(4,'601B32C','R8izKzXI',1000,1,1000,NULL,'C6020CCC',NULL,'2022-10-05 14:04:00'),(5,'79106AF','9LAUCGTR',1000,1,1000,NULL,'4791151F',NULL,'2022-10-05 14:38:00');
 /*!40000 ALTER TABLE `log_peron` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -103,6 +103,7 @@ CREATE TABLE `log_ticket` (
   `description` text DEFAULT NULL,
   `paid_at` datetime NOT NULL,
   `ticket_type` enum('Pergi','Pulang') DEFAULT NULL,
+  `payment_method` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -131,7 +132,7 @@ CREATE TABLE `log_uang` (
   `verify_at` datetime NOT NULL,
   `description` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -158,12 +159,13 @@ CREATE TABLE `pengaduan` (
   `ticket_price` bigint(20) DEFAULT NULL,
   `money_accept` bigint(20) DEFAULT NULL,
   `money_changes` bigint(20) DEFAULT NULL,
+  `payment_method` varchar(255) DEFAULT NULL,
   `answer_status` enum('PENDING','COMPLETE') DEFAULT NULL,
   `description` text DEFAULT NULL,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -172,7 +174,6 @@ CREATE TABLE `pengaduan` (
 
 LOCK TABLES `pengaduan` WRITE;
 /*!40000 ALTER TABLE `pengaduan` DISABLE KEYS */;
-INSERT INTO `pengaduan` VALUES (1,'4J34ESIK',NULL,'Customer #4J34eSiK',1000,2000,0,'PENDING','Gagal cetak tiket karena tidak dapat terhubung ke server.','2022-10-04 15:52:59','2022-10-04 15:52:59'),(2,'NONE',NULL,NULL,NULL,NULL,NULL,'PENDING',NULL,'2022-10-04 17:18:03','2022-10-04 17:18:03');
 /*!40000 ALTER TABLE `pengaduan` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -215,4 +216,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-05 21:00:23
+-- Dump completed on 2022-10-16 21:55:16

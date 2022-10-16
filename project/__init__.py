@@ -37,6 +37,7 @@ def create_app():
     dbname = '/kios_pelabuhan'
     socket = '?unix_socket=/var/run/mysqld/mysqld.sock'
     dbname = dbname + socket
+    
     app.config['SQLALCHEMY_DATABASE_URI'] = userpass + basedir + dbname
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JSON_SORT_KEYS'] = False

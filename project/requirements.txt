@@ -1,7 +1,7 @@
 requests
 uuid
-Flask
-flask-sqlalchemy 
+Flask==2.5.1
+flask-sqlalchemy
 flask-login
 flask-serialize
 flask-cors
