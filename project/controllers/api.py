@@ -77,7 +77,7 @@ def format_rupiah(uang):
         return format_rupiah(q) + '.' + p
 
 
-def post_api(type, endpoint, formdata):
+def post_payment(type, endpoint, formdata):
     global req, res
     try:
         if type == 'POST':
@@ -92,7 +92,7 @@ def post_api(type, endpoint, formdata):
         return res
 
     except Exception as e:
-        return e
+        return str(e)
 
 
 def test_print_struk(idvendor, idproduct, image):
@@ -115,6 +115,8 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
     waktu = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     # save to db
     # store_data(idtransaction, typetransaction, cardname, waktu, cardprice)
+    if paymentmethod == 'VA':
+        paymentmethod = 'Virtual Account'
     # ready to print
     print("|─────────────────────────────────────────|")
     print("|    Jaket Boat                           |")
@@ -125,7 +127,7 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
     print("|    ==================================   |")
     print("|    Kode          :  #{}            |".format(idtransaction))
     print("|    Berangkat     :  {}             |".format(berangkat))
-    print("|    Metode Bayar  :  {}             |".format(paymentmethod))
+    print("|    Transaksi     :  {}             |".format(paymentmethod))
     print("|    Harga         :  Rp.{}            |".format(
         format_rupiah(str(ticketprice))))
     print("|                                         |")
@@ -167,7 +169,7 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
         p.tab()
         p.text(berangkat)
         p.lf()
-        p.text('\tMetode Bayar')
+        p.text('\tTransaksi')
         p.tab()
         p.text(paymentmethod)
         p.lf()
@@ -199,6 +201,8 @@ def print_struk_ticket(idvendor, idproduct, idtransaction, berangkat, typetransa
 def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total, ticketscode, createdat, vmid, paymentmethod):
     global p
     waktu = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    if paymentmethod == 'VA':
+        paymentmethod = 'Virtual Account'
     # ready to print
     print("|─────────────────────────────────────────|")
     print("|    Jaket Boat                           |")
@@ -209,7 +213,7 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
     print("|    ==================================   |")
     print("|    Kode          :  #{}            |".format(ticketscode[0]))
     print("|    Tanggal       :  {}             |".format(createdat))
-    print("|    Metode Bayar  :  {}             |".format(paymentmethod))
+    print("|    Transaksi     :  {}             |".format(paymentmethod))
     print("|    Harga         :  Rp.{}            |".format(
         format_rupiah(str(peronprice))))
     print("|                                         |")
@@ -252,7 +256,7 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
             p.tab()
             p.text(createdat)
             p.lf()
-            p.text('\tMetode Bayar')
+            p.text('\tTransaksi')
             p.tab()
             p.tab()
             p.text(paymentmethod)
@@ -282,8 +286,10 @@ def print_struk_peron(idvendor, idproduct, customer, peronprice, quantity, total
 
 
 def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketprice, moneyaccept, moneychanges,
-                          description):
+                          description, paymentmethod):
     waktu = datetime.now().strftime("%d/%m/%Y %H:%M")
+    if paymentmethod == 'VA':
+        paymentmethod = 'Virtual Account'
     # ready to print
     print("|──────────────────────────────────────────────|")
     print("|    Jaket Boat                                |")
@@ -294,6 +300,7 @@ def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketpri
     print("|    ======================================    |")
     print("|    Kode Pelanggan        :  {}               |".format(customerid))
     print("|    Nama Lengkap          :  {}               |".format(name))
+    print("|    Transaksi             :  {}               |".format(paymentmethod))
     print("|    Harga Tiket           :  Rp.{}            |".format(
         format_rupiah(str(ticketprice))))
     print("|    Total Uang Masuk      :  Rp.{}            |".format(
@@ -341,6 +348,11 @@ def print_struk_pengaduan(idvendor, idproduct, customerid, vmid, name, ticketpri
         p.tab()
         p.tab()
         p.text(name)
+        p.lf()
+        p.text('Transaksi')
+        p.tab()
+        p.tab()
+        p.text(paymentmethod)
         p.lf()
         p.text('Harga Tiket')
         p.tab()
@@ -1065,7 +1077,7 @@ def complaint():
     time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     paymentMethod = request.get_json().get('payment_method')
     result = print_struk_pengaduan(idvendor=idVendor, idproduct=idProduct, customerid=str(customerId).upper(), vmid=vmId, name=name,
-                                   ticketprice=ticketPrice, moneyaccept=moneyAccept, moneychanges=moneyChanges, payment_method=paymentMethod,
+                                   ticketprice=ticketPrice, moneyaccept=moneyAccept, moneychanges=moneyChanges, paymentmethod=paymentMethod,
                                    description=description)
     insert_pengaduan(customer_id=str(customerId).upper(), vm_id=vmId, name=name, ticket_price=ticketPrice, money_accept=moneyAccept,
                      money_changes=moneyChanges, payment_method=paymentMethod, answer_status="PENDING", description=description, created_at=time,
@@ -1120,17 +1132,14 @@ def test_print():
 
 @api.route('/payment', methods=['POST'])
 def payment():
+    global paymentMethod, merchantId, merchantRef, amount, notifUrl, expiredParameter, response
     paymentMethod = request.get_json().get('payment_method')
 
-    # ---------------------------------------------------------
-    # PAYMENT METHOD LIST
-    # ---------------------------------------------------------
-    # QRIS, VA (BANK DKI), CASH
-    # ---------------------------------------------------------
     if paymentMethod == 'QRIS':
         merchantId = request.get_json().get('merchant_id')
         merchantRef = request.get_json().get('merchant_ref')
         amount = request.get_json().get('amount')
+        # amount = 1
         notifUrl = request.get_json().get('notif_url')
         expiredParameter = request.get_json().get('expired_parameter')
         form_data = {
@@ -1141,14 +1150,17 @@ def payment():
             'expired_parameter': expiredParameter
         }
 
-        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
+        response = post_payment(type='POST', endpoint=PAYMENT_BASEURL +
                                 '/qrisdkipelabuhan-prod/index.php/v1/transaksi/createqr', formdata=form_data)
-        if response['status'] == True:
-            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
-        elif response['status'] == False:
-            return jsonify({'success': False, 'message': response['message']}), 500
-        else:
-            return jsonify({'success': False, 'message': response}), 500
+        try:
+            if response['status'] == True:
+                return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
+            elif response['status'] == False:
+                return jsonify({'success': False, 'message': response['message']}), 500
+            else:
+                return jsonify({'success': False, 'message': response}), 500
+        except Exception as e:
+            return jsonify({'success': False, 'message': e}), 500
 
     elif paymentMethod == 'VA':
         merchantId = request.get_json().get('merchant_id')
@@ -1159,17 +1171,20 @@ def payment():
             'merchant_id': merchantId,
             'amount': amount,
             'notif_url': notifUrl,
-            'expired_parameter': expiredParameter
+            'expired_param': expiredParameter
         }
 
-        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
+        response = post_payment(type='POST', endpoint=PAYMENT_BASEURL +
                                 '/vadkipelabuhan-prod/index.php/v1/transaksi/createbilling', formdata=form_data)
-        if response['status'] == True:
-            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
-        elif response['status'] == False:
-            return jsonify({'success': False, 'message': response['message']}), 500
-        else:
-            return jsonify({'success': False, 'message': response}), 500
+        try:
+            if response['status'] == True:
+                return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
+            elif response['status'] == False:
+                return jsonify({'success': False, 'message': response['message']}), 500
+            else:
+                return jsonify({'success': False, 'message': response}), 500
+        except Exception as e:
+            return jsonify({'success': False, 'message': e}), 500
 
     else:
         return jsonify({'success': False, 'message': 'Metode pembayaran yang support hanya: QRIS, VA (DKI)'}), 200
@@ -1177,31 +1192,36 @@ def payment():
 
 @api.route('/payment_check', methods=['POST'])
 def payment_check():
+    global paymentMethod, invoiceId, idTagihan, response
     paymentMethod = request.get_json().get('payment_method')
 
-    # ---------------------------------------------------------
-    # PAYMENT METHOD LIST
-    # ---------------------------------------------------------
-    # QRIS, VA (BANK DKI), CASH
-    # ---------------------------------------------------------
     if paymentMethod == 'QRIS':
         invoiceId = request.get_json().get('invoice_id')
-        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
-                                '/qrisdkipelabuhan-prod/index.php/v1/transaksi/cekstatuslocal', data={'invoiceid': invoiceId})
-        if response['status'] == True:
-            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
-        elif response['status'] == False:
-            return jsonify({'success': False, 'message': response['message']}), 500
-        else:
-            return jsonify({'success': False, 'message': response}), 500
+        response = post_payment(type='POST', endpoint=PAYMENT_BASEURL +
+                                '/qrisdkipelabuhan-prod/index.php/v1/transaksi/cekstatuslocal', formdata={'invoiceid': invoiceId})
+        try:
+            if response['status'] == True:
+                return jsonify({'success': True, 'message': 'Berhasil mendapatkan data', 'data': response['data']}), 200
+            elif response['status'] == False:
+                return jsonify({'success': False, 'message': response['message']}), 500
+            else:
+                return jsonify({'success': False, 'message': response}), 500
+        except Exception as e:
+            return jsonify({'success': False, 'message': e}), 500
 
     elif paymentMethod == 'VA':
         idTagihan = request.get_json().get('id_tagihan')
-        response = post_api(type='POST', endpoint=PAYMENT_BASEURL +
-                                '/vadkipelabuhan-prod/index.php/v1/transaksi/cekstatuslocal', data={'id_tagihan': idTagihan})
-        if response['status'] == True:
-            return jsonify({'success': True, 'message': response['message'], 'data': response['data']}), 200
-        elif response['status'] == False:
-            return jsonify({'success': False, 'message': response['message']}), 500
-        else:
-            return jsonify({'success': False, 'message': response}), 500
+        response = post_payment(type='POST', endpoint=PAYMENT_BASEURL +
+                                '/vadkipelabuhan-prod/index.php/v1/transaksi/cekstatuslocal', formdata={'id_tagihan': idTagihan})
+        try:
+            if response['status'] == True:
+                return jsonify({'success': True, 'message': 'Berhasil mendapatkan data', 'data': response['data']}), 200
+            elif response['status'] == False:
+                return jsonify({'success': False, 'message': response['message']}), 500
+            else:
+                return jsonify({'success': False, 'message': response}), 500
+        except Exception as e:
+            return jsonify({'success': False, 'message': e}), 500
+
+    else:
+        return jsonify({'success': False, 'message': 'Metode pembayaran yang support hanya: QRIS, VA (DKI)'}), 200

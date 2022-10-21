@@ -69,11 +69,9 @@ class LogTicket(db.Model):
     paid_at = db.Column(db.DateTime, nullable=False,
                           default=datetime.utcnow)
     ticket_type = db.Column(ENUM("Pergi", "Pulang"))
-    payment_method = db.Column(VARCHAR(255))
 
     def __init__(self, id, ref_number, booking_code, passanger_code, passanger, origin, departure_at, 
-                destination, arrive_at, status, price, money_changes, description, paid_at, ticket_type,
-                payment_method):
+                destination, arrive_at, status, price, money_changes, description, paid_at, ticket_type):
         self.id = id
         self.ref_number = ref_number
         self.booking_code = booking_code
@@ -89,7 +87,6 @@ class LogTicket(db.Model):
         self.description = description
         self.paid_at = paid_at
         self.ticket_type = ticket_type
-        self.payment_method = payment_method
 
     @property
     def serialize(self):
@@ -108,8 +105,7 @@ class LogTicket(db.Model):
             "money_changes": self.money_changes,
             "description": self.description,
             "paid_at": self.paid_at,
-            "ticket_type": self.ticket_type,
-            "payment_method": self.payment_method
+            "ticket_type": self.ticket_type
         }
 
 
@@ -124,12 +120,11 @@ class LogPeron(db.Model):
     status = db.Column(VARCHAR(255))
     tickets_code = db.Column(TEXT, nullable=True)
     money_changes = db.Column(BIGINT(20), nullable=True)
-    payment_method = db.Column(VARCHAR(255))
     created_at = db.Column(db.DateTime, nullable=False,
                           default=datetime.utcnow)
 
     def __init__(self, ref_number, customer, peron_price, quantity, total, status, 
-                tickets_code, money_changes, payment_method, created_at):
+                tickets_code, money_changes, created_at):
         self.ref_number = ref_number
         self.customer = customer
         self.peron_price = peron_price
@@ -138,7 +133,6 @@ class LogPeron(db.Model):
         self.status = status
         self.tickets_code = tickets_code
         self.money_changes = money_changes
-        self.payment_method = payment_method
         self.created_at = created_at
 
     @property
@@ -152,7 +146,6 @@ class LogPeron(db.Model):
             "status": self.status,
             "tickets_code": self.tickets_code,
             "money_changes": self.money_changes,
-            "payment_method": self.payment_method,
             "created_at": self.created_at,
         }
 
@@ -224,7 +217,6 @@ class Pengaduan(db.Model):
     ticket_price = db.Column(BIGINT(20), nullable=True)
     money_accept = db.Column(BIGINT(20), nullable=True)
     money_changes = db.Column(BIGINT(20), nullable=True)
-    payment_method = db.Column(VARCHAR(255))
     answer_status = db.Column(ENUM("PENDING", "COMPLETE"))
     description = db.Column(TEXT, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False,
@@ -234,14 +226,13 @@ class Pengaduan(db.Model):
 
 
     def __init__(self, customer_id, vm_id, name, ticket_price, money_accept, money_changes, 
-                payment_method, answer_status, description, created_at, updated_at):
+                answer_status, description, created_at, updated_at):
         self.customer_id = customer_id
         self.vm_id = vm_id
         self.name = name
         self.ticket_price = ticket_price
         self.money_accept = money_accept
         self.money_changes = money_changes
-        self.payment_method = payment_method
         self.answer_status = answer_status
         self.description = description
         self.created_at = created_at
@@ -257,7 +248,6 @@ class Pengaduan(db.Model):
             'ticket_price': self.ticket_price,
             'money_accept': self.money_accept,
             'money_changes': self.money_changes,
-            'payment_method': self.payment_method,
             'answer_status': self.answer_status,
             'description': self.description,
             'created_at': self.created_at,
