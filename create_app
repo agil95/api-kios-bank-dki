@@ -1,0 +1,3 @@
+create app main: pm2 serve /home/kios/Documents/kios-app 8080 --name kios-app --spa
+crate app engine: pm2 start /home/kios/Documents/Api_Kios_Pelabuhan/start.sh --name kios-engine
+
