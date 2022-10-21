@@ -8,7 +8,7 @@ services:
       - "5000:5000"
     container_name: flask-app
     restart: unless-stopped
-    image: agil95/kios-engine:1.0.0
+    image: agil95/kios-engine:1.1.0
 
   db:
     image: mysql:5.7

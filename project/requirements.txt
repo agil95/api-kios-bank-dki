@@ -1,6 +1,6 @@
 requests
 uuid
-Flask==2.5.1
+Flask
 flask-sqlalchemy
 flask-login
 flask-serialize
