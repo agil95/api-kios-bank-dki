@@ -476,20 +476,23 @@ def cancel_money_validator():
     cmdSync = bytes.fromhex("7F 80 01 11 65 82")
     cmdHostProtocolVersion7 = bytes.fromhex("7F 80 02 06 07 21 94")
     cmdDisable = bytes.fromhex("7F 80 01 09 35 82")
-    ser = device_io(port='/dev/ttyUSB0', baudrate=9600,
-                    stopbits=serial.STOPBITS_TWO, timeout=1)
-    if ser.is_open:
-        ser.write(cmdSync)
-        sleep(0.5)
-        ser.write(cmdHostProtocolVersion7)
-        sleep(0.5)
-        ser.write(cmdDisable)
-        ser.flush()
-        ser.close()
+
+    try:
+        ser = device_io(port='/dev/ttyUSB0', baudrate=9600,
+                        stopbits=serial.STOPBITS_TWO, timeout=1)
+        if ser.is_open:
+            ser.write(cmdSync)
+            sleep(0.5)
+            ser.write(cmdHostProtocolVersion7)
+            sleep(0.5)
+            ser.write(cmdDisable)
+            ser.flush()
+            ser.close()
 
         return True
-    else:
-        return False
+        
+    except:
+        return True
 
 # ============================================================================================================== #
 
@@ -497,9 +500,9 @@ def cancel_money_validator():
 @api.route('/test', methods=['POST'])
 def test():
     data = request.get_json()
-    test = data.get('ticket_price')
-    print(test)
-    return jsonify({'test': test})
+    ticketPrice = data.get('ticket_price')
+    print(f"[INFO][TEST API] Ticket Price Rp.{ticketPrice}")
+    return jsonify({'success':True, 'message': 'API Connected!', 'ticket_price': ticketPrice})
 
 
 @api.route('/money_validator', methods=['POST'])
@@ -580,157 +583,81 @@ def money_validator():
     # return jsonify({'test': price})
     # pass
 
-    ser = device_io(port='/dev/ttyUSB0', baudrate=9600,
-                    stopbits=serial.STOPBITS_TWO, timeout=1)
+    try:
+        ser = device_io(port='/dev/ttyUSB0', baudrate=9600,
+                        stopbits=serial.STOPBITS_TWO, timeout=1)
 
-    if ser.is_open:
-        print("[INFO] Bill validator is Open!")
-        # time.sleep(1)
-        ser.write(cmdSync)
-        res = ser.readline()
-        response_io(result=res, info="[INFO] device sync ->")
-
-        sleep(0.5)
-        ser.write(cmdHostProtocolVersion7)
-
-        if transactionType == "Buy":
-            sleep(1)
-            ser.write(cmdSetInhibits_alt)
-        else:
-            sleep(1)
-            ser.write(cmdSetInhibitsOpen5k10k20k50k100k_alt)
-
-        sleep(0.5)
-        ser.write(cmdEnable)
-        res3 = ser.readline()
-        response_io(result=res3, info="[INFO] enable ->")
-
-        if holdinEscrow:
-            sleep(1)
-            ser.write(cmdHold)
-            res4 = ser.readline()
-            response_io(result=res4, info="hold in escrow ->")
-
-        print("[INFO] please insert the cash...")
-        while currValue < price:
-            # Poll 1 -----------------------------------------------------------------------------------------------
-            sleep(0.5)
-            ser.write(cmdPoll_alt)
-            res = ser.readline()
-            # ResponeIO(result=res, info="[INFO] poll ResponeIO 1 ->")
-            value_one = response_io(
-                result=res, info="[INFO] poll ResponeIO 1 ->")
+        if ser.is_open:
+            print("[INFO] Bill validator is Open!")
             # time.sleep(1)
-            # print("len data 1 ->", len(value_one))
-            if len(value_one) > 8:
-                if value_one[6] == "EF":
-                    if value_one[7] == "07":
-                        currValue = 100000
-                        tempValue.append(currValue)
-                    elif value_one[7] == "06":
-                        currValue = 50000
-                        tempValue.append(currValue)
-                    elif value_one[7] == "05":
-                        currValue = 20000
-                        tempValue.append(currValue)
-                    elif value_one[7] == "04":
-                        currValue = 10000
-                        tempValue.append(currValue)
-                    elif value_one[7] == "03":
-                        currValue = 5000
-                        tempValue.append(currValue)
-                    elif value_one[7] == "02":
-                        currValue = 2000
-                        tempValue.append(currValue)
-                    elif value_one[7] == "01":
-                        currValue = 1000
-                        tempValue.append(currValue)
-                    insert_log_money(money=currValue, customerId=customerId)
-                    print('[INFO] cash detect : {} IDR'.format(currValue))
-                    print('[INFO] temp cash -> {}'.format(tempValue))
-                    totalValue += currValue
+            ser.write(cmdSync)
+            res = ser.readline()
+            response_io(result=res, info="[INFO] device sync ->")
 
-                    if totalValue > price:
-                        moneyChanges += totalValue - price
-                        totalValue = sum(tempValue)
-                        print("[INFO] cash is bigger than card price! [poll 1]")
-                        # sleep(1)
-                        # ser.write(cmdRejectNote)
-                        # if len(tempValue) > 2:
-                        #     tempValue.pop(-1)
-                        #     totalValue = sum(tempValue)
-                        # else:
-                        #     totalValue = tempValue[0]
-                        #     tempValue.pop(-1)
-                        #     totalValue = sum(tempValue)
-                        print('[INFO] total cash : {} IDR'.format(totalValue))
-                        # self.signalMoneyCount.emit(tempValue)
-                    else:
-                        print('[INFO] total cash : {} IDR'.format(totalValue))
-                        # self.signalMoneyCount.emit(tempValue)
+            sleep(0.5)
+            ser.write(cmdHostProtocolVersion7)
 
-                if (value_one[3] + value_one[4]).upper() == "F0ED":
-                    print('[INFO] cash ejected!')
-                    sleep(0.5)
-                    ser.write(cmdRejectNote)
-
-                if (value_one[3] + value_one[4]).upper() == "F0EE":
-                    if (value_one[3] + value_one[4] + value_one[6]).upper() == "F0EEEB":
-                        print("[INFO] credit cash")
-                        print("[INFO] cash stacked")
-                        if totalValue >= price:
-                            break
-                    else:
-                        print("[INFO] credit cash")
-
-                if (value_one[3] + value_one[4]).upper() == "F0CC":
-                    print("[INFO] cash stacking")
-
-                if (value_one[3] + value_one[4]).upper() == "F0EB":
-                    print("[INFO] cash stacked")
-                    if totalValue >= price:
-                        break
-
-                if (value_one[3] + value_one[4]).upper() == "F0E7":
-                    print("[INFO] stacker full!")
-                    sleep(1)
-                    ser.write(cmdRejectNote)
-
+            if transactionType == "Buy":
+                sleep(1)
+                ser.write(cmdSetInhibits_alt)
             else:
-                if value_one[5] != "00":
-                    if value_one[3] + value_one[4].upper() == "F0EF":
-                        if value_one[5] == "07":
+                sleep(1)
+                ser.write(cmdSetInhibitsOpen5k10k20k50k100k_alt)
+
+            sleep(0.5)
+            ser.write(cmdEnable)
+            res3 = ser.readline()
+            response_io(result=res3, info="[INFO] enable ->")
+
+            if holdinEscrow:
+                sleep(1)
+                ser.write(cmdHold)
+                res4 = ser.readline()
+                response_io(result=res4, info="hold in escrow ->")
+
+            print("[INFO] please insert the cash...")
+            while currValue < price:
+                # Poll 1 -----------------------------------------------------------------------------------------------
+                sleep(0.5)
+                ser.write(cmdPoll_alt)
+                res = ser.readline()
+                # ResponeIO(result=res, info="[INFO] poll ResponeIO 1 ->")
+                value_one = response_io(
+                    result=res, info="[INFO] poll ResponeIO 1 ->")
+                # time.sleep(1)
+                # print("len data 1 ->", len(value_one))
+                if len(value_one) > 8:
+                    if value_one[6] == "EF":
+                        if value_one[7] == "07":
                             currValue = 100000
                             tempValue.append(currValue)
-                        elif value_one[5] == "06":
+                        elif value_one[7] == "06":
                             currValue = 50000
                             tempValue.append(currValue)
-                        elif value_one[5] == "05":
+                        elif value_one[7] == "05":
                             currValue = 20000
                             tempValue.append(currValue)
-                        elif value_one[5] == "04":
+                        elif value_one[7] == "04":
                             currValue = 10000
                             tempValue.append(currValue)
-                        elif value_one[5] == "03":
+                        elif value_one[7] == "03":
                             currValue = 5000
                             tempValue.append(currValue)
-                        elif value_one[5] == "02":
+                        elif value_one[7] == "02":
                             currValue = 2000
                             tempValue.append(currValue)
-                        elif value_one[5] == "01":
+                        elif value_one[7] == "01":
                             currValue = 1000
                             tempValue.append(currValue)
-                        insert_log_money(
-                            money=currValue, customerId=customerId)
-                        print('[INFO] cash detect : {}'.format(currValue))
+                        insert_log_money(money=currValue, customerId=customerId)
+                        print('[INFO] cash detect : {} IDR'.format(currValue))
                         print('[INFO] temp cash -> {}'.format(tempValue))
                         totalValue += currValue
 
                         if totalValue > price:
                             moneyChanges += totalValue - price
                             totalValue = sum(tempValue)
-                            print(
-                                "[INFO] cash is bigger than card price! [poll 1]")
+                            print("[INFO] cash is bigger than card price! [poll 1]")
                             # sleep(1)
                             # ser.write(cmdRejectNote)
                             # if len(tempValue) > 2:
@@ -743,72 +670,226 @@ def money_validator():
                             print('[INFO] total cash : {} IDR'.format(totalValue))
                             # self.signalMoneyCount.emit(tempValue)
                         else:
-                            print(
-                                '[INFO] total cash -> {} IDR'.format(totalValue))
+                            print('[INFO] total cash : {} IDR'.format(totalValue))
                             # self.signalMoneyCount.emit(tempValue)
 
-                if (value_one[3] + value_one[4]).upper() == "F0ED":
-                    print('[INFO] cash ejected!')
-                    sleep(0.5)
-                    ser.write(cmdRejectNote)
+                    if (value_one[3] + value_one[4]).upper() == "F0ED":
+                        print('[INFO] cash ejected!')
+                        sleep(0.5)
+                        ser.write(cmdRejectNote)
 
-                if (value_one[3] + value_one[4]).upper() == "F0EE":
-                    if (value_one[3] + value_one[4] + value_one[6]).upper() == "F0EEEB":
-                        print("[INFO] credit cash")
+                    if (value_one[3] + value_one[4]).upper() == "F0EE":
+                        if (value_one[3] + value_one[4] + value_one[6]).upper() == "F0EEEB":
+                            print("[INFO] credit cash")
+                            print("[INFO] cash stacked")
+                            if totalValue >= price:
+                                break
+                        else:
+                            print("[INFO] credit cash")
+
+                    if (value_one[3] + value_one[4]).upper() == "F0CC":
+                        print("[INFO] cash stacking")
+
+                    if (value_one[3] + value_one[4]).upper() == "F0EB":
                         print("[INFO] cash stacked")
                         if totalValue >= price:
                             break
-                    else:
-                        print("[INFO] credit cash")
 
-                if (value_one[3] + value_one[4]).upper() == "F0CC":
-                    print("[INFO] cash stacking")
+                    if (value_one[3] + value_one[4]).upper() == "F0E7":
+                        print("[INFO] stacker full!")
+                        sleep(1)
+                        ser.write(cmdRejectNote)
 
-                if (value_one[3] + value_one[4]).upper() == "F0EB":
-                    print("[INFO] cash stacked")
-                    if totalValue >= price:
-                        break
+                else:
+                    if value_one[5] != "00":
+                        if value_one[3] + value_one[4].upper() == "F0EF":
+                            if value_one[5] == "07":
+                                currValue = 100000
+                                tempValue.append(currValue)
+                            elif value_one[5] == "06":
+                                currValue = 50000
+                                tempValue.append(currValue)
+                            elif value_one[5] == "05":
+                                currValue = 20000
+                                tempValue.append(currValue)
+                            elif value_one[5] == "04":
+                                currValue = 10000
+                                tempValue.append(currValue)
+                            elif value_one[5] == "03":
+                                currValue = 5000
+                                tempValue.append(currValue)
+                            elif value_one[5] == "02":
+                                currValue = 2000
+                                tempValue.append(currValue)
+                            elif value_one[5] == "01":
+                                currValue = 1000
+                                tempValue.append(currValue)
+                            insert_log_money(
+                                money=currValue, customerId=customerId)
+                            print('[INFO] cash detect : {}'.format(currValue))
+                            print('[INFO] temp cash -> {}'.format(tempValue))
+                            totalValue += currValue
 
-                if (value_one[3] + value_one[4]).upper() == "F0E7":
-                    print("[INFO] stacker full!")
-                    sleep(1)
-                    ser.write(cmdRejectNote)
-            # ------------------------------------------------------------------------------------------------------
-            # Poll 2 -----------------------------------------------------------------------------------------------
-            sleep(0.5)
-            ser.write(cmdPoll)
-            res2 = ser.readline()
-            # ResponeIO(result=res2, info="[INFO] poll ResponeIO 2 ->")
-            value_two = response_io(
-                result=res2, info="[INFO] poll ResponeIO 2 ->")
-            # time.sleep(1)
-            # print("len data 2 ->", len(value_two))
-            if len(value_two) <= 8:
-                if value_two[5] != "00":
-                    if value_two[3] + value_two[4].upper() == "F0EF":
-                        if value_two[5] == "07":
+                            if totalValue > price:
+                                moneyChanges += totalValue - price
+                                totalValue = sum(tempValue)
+                                print(
+                                    "[INFO] cash is bigger than card price! [poll 1]")
+                                # sleep(1)
+                                # ser.write(cmdRejectNote)
+                                # if len(tempValue) > 2:
+                                #     tempValue.pop(-1)
+                                #     totalValue = sum(tempValue)
+                                # else:
+                                #     totalValue = tempValue[0]
+                                #     tempValue.pop(-1)
+                                #     totalValue = sum(tempValue)
+                                print('[INFO] total cash : {} IDR'.format(totalValue))
+                                # self.signalMoneyCount.emit(tempValue)
+                            else:
+                                print(
+                                    '[INFO] total cash -> {} IDR'.format(totalValue))
+                                # self.signalMoneyCount.emit(tempValue)
+
+                    if (value_one[3] + value_one[4]).upper() == "F0ED":
+                        print('[INFO] cash ejected!')
+                        sleep(0.5)
+                        ser.write(cmdRejectNote)
+
+                    if (value_one[3] + value_one[4]).upper() == "F0EE":
+                        if (value_one[3] + value_one[4] + value_one[6]).upper() == "F0EEEB":
+                            print("[INFO] credit cash")
+                            print("[INFO] cash stacked")
+                            if totalValue >= price:
+                                break
+                        else:
+                            print("[INFO] credit cash")
+
+                    if (value_one[3] + value_one[4]).upper() == "F0CC":
+                        print("[INFO] cash stacking")
+
+                    if (value_one[3] + value_one[4]).upper() == "F0EB":
+                        print("[INFO] cash stacked")
+                        if totalValue >= price:
+                            break
+
+                    if (value_one[3] + value_one[4]).upper() == "F0E7":
+                        print("[INFO] stacker full!")
+                        sleep(1)
+                        ser.write(cmdRejectNote)
+                # ------------------------------------------------------------------------------------------------------
+                # Poll 2 -----------------------------------------------------------------------------------------------
+                sleep(0.5)
+                ser.write(cmdPoll)
+                res2 = ser.readline()
+                # ResponeIO(result=res2, info="[INFO] poll ResponeIO 2 ->")
+                value_two = response_io(
+                    result=res2, info="[INFO] poll ResponeIO 2 ->")
+                # time.sleep(1)
+                # print("len data 2 ->", len(value_two))
+                if len(value_two) <= 8:
+                    if value_two[5] != "00":
+                        if value_two[3] + value_two[4].upper() == "F0EF":
+                            if value_two[5] == "07":
+                                currValue = 100000
+                                tempValue.append(currValue)
+                            elif value_two[5] == "06":
+                                currValue = 50000
+                                tempValue.append(currValue)
+                            elif value_two[5] == "05":
+                                currValue = 20000
+                                tempValue.append(currValue)
+                            elif value_two[5] == "04":
+                                currValue = 10000
+                                tempValue.append(currValue)
+                            elif value_two[5] == "03":
+                                currValue = 5000
+                                tempValue.append(currValue)
+                            elif value_two[5] == "02":
+                                currValue = 2000
+                                tempValue.append(currValue)
+                            elif value_two[5] == "01":
+                                currValue = 1000
+                                tempValue.append(currValue)
+                            insert_log_money(
+                                money=currValue, customerId=customerId)
+                            print('[INFO] cash detect : {} IDR'.format(currValue))
+                            print('[INFO] temp cash -> {}'.format(tempValue))
+                            totalValue += currValue
+
+                            if totalValue > price:
+                                moneyChanges += totalValue - price
+                                totalValue = sum(tempValue)
+                                # sleep(0.5)
+                                # ser.write(cmdRejectNote)
+                                print(
+                                    "[INFO] cash is bigger than card price! [poll 2]")
+                                # if len(tempValue) > 2:
+                                #     tempValue.pop(-1)
+                                #     totalValue = sum(tempValue)
+                                # else:
+                                #     totalValue = tempValue[0]
+                                #     tempValue.pop(-1)
+                                #     totalValue = sum(tempValue)
+                                print('[INFO] total cash : {} IDR'.format(totalValue))
+                                # self.signalMoneyCount.emit(tempValue)
+                            else:
+                                print('[INFO] total cash : {} IDR'.format(totalValue))
+                                # self.signalMoneyCount.emit(tempValue)
+
+                    if (value_two[3] + value_two[4]).upper() == "F0ED":
+                        print('[INFO] cash ejected!')
+                        sleep(0.5)
+                        ser.write(cmdRejectNote_alt)
+
+                    if (value_two[3] + value_two[4]).upper() == "F0EE":
+                        if (value_two[3] + value_two[4] + value_two[6]).upper() == "F0EEEB":
+                            print("[INFO] credit cash")
+                            print("[INFO] cash stacked")
+                            if totalValue >= price:
+                                break
+                        else:
+                            print("[INFO] credit cash")
+
+                    if (value_two[3] + value_two[4]).upper() == "F0CC":
+                        print("[INFO] cash stacking")
+
+                    if (value_two[3] + value_two[4]).upper() == "F0EB":
+                        print("[INFO] cash stacked")
+                        if totalValue >= ticketValue:
+                            break
+
+                    if (value_two[3] + value_two[4]).upper() == "F0E7":
+                        print("[INFO] stacker full!")
+                        sleep(0.5)
+                        ser.write(cmdRejectNote_alt)
+
+                else:
+                    if value_two[6] == "EF":
+                        if value_two[7] == "07":
                             currValue = 100000
                             tempValue.append(currValue)
-                        elif value_two[5] == "06":
+                        elif value_two[7] == "06":
                             currValue = 50000
                             tempValue.append(currValue)
-                        elif value_two[5] == "05":
+                        elif value_two[7] == "05":
                             currValue = 20000
                             tempValue.append(currValue)
-                        elif value_two[5] == "04":
+                        elif value_two[7] == "04":
                             currValue = 10000
                             tempValue.append(currValue)
-                        elif value_two[5] == "03":
+                        elif value_two[7] == "03":
                             currValue = 5000
                             tempValue.append(currValue)
-                        elif value_two[5] == "02":
+                        elif value_two[7] == "02":
                             currValue = 2000
                             tempValue.append(currValue)
-                        elif value_two[5] == "01":
+                        elif value_two[7] == "01":
                             currValue = 1000
                             tempValue.append(currValue)
-                        insert_log_money(
-                            money=currValue, customerId=customerId)
+                            # currValue = 2000
+                            # tempValue.append(currValue)
+                        insert_log_money(money=currValue, customerId=customerId)
                         print('[INFO] cash detect : {} IDR'.format(currValue))
                         print('[INFO] temp cash -> {}'.format(tempValue))
                         totalValue += currValue
@@ -818,8 +899,7 @@ def money_validator():
                             totalValue = sum(tempValue)
                             # sleep(0.5)
                             # ser.write(cmdRejectNote)
-                            print(
-                                "[INFO] cash is bigger than card price! [poll 2]")
+                            print("[INFO] cash is bigger than card price! [poll 2]")
                             # if len(tempValue) > 2:
                             #     tempValue.pop(-1)
                             #     totalValue = sum(tempValue)
@@ -833,129 +913,55 @@ def money_validator():
                             print('[INFO] total cash : {} IDR'.format(totalValue))
                             # self.signalMoneyCount.emit(tempValue)
 
-                if (value_two[3] + value_two[4]).upper() == "F0ED":
-                    print('[INFO] cash ejected!')
-                    sleep(0.5)
-                    ser.write(cmdRejectNote_alt)
+                    if (value_two[3] + value_two[4]).upper() == "F0ED":
+                        print('[INFO] cash ejected!')
+                        sleep(0.5)
+                        ser.write(cmdRejectNote_alt)
 
-                if (value_two[3] + value_two[4]).upper() == "F0EE":
-                    if (value_two[3] + value_two[4] + value_two[6]).upper() == "F0EEEB":
-                        print("[INFO] credit cash")
+                    if (value_two[3] + value_two[4]).upper() == "F0EE":
+                        if (value_two[3] + value_two[4] + value_two[6]).upper() == "F0EEEB":
+                            print("[INFO] credit cash")
+                            print("[INFO] cash stacked")
+                            if totalValue >= price:
+                                break
+                        else:
+                            print("[INFO] credit cash")
+
+                    if (value_two[3] + value_two[4]).upper() == "F0CC":
+                        print("[INFO] cash stacking")
+
+                    if (value_two[3] + value_two[4]).upper() == "F0EB":
                         print("[INFO] cash stacked")
                         if totalValue >= price:
                             break
-                    else:
-                        print("[INFO] credit cash")
 
-                if (value_two[3] + value_two[4]).upper() == "F0CC":
-                    print("[INFO] cash stacking")
+                    if (value_two[3] + value_two[4]).upper() == "F0E7":
+                        print("[INFO] stacker full!")
+                        sleep(0.5)
+                        ser.write(cmdRejectNote_alt)
 
-                if (value_two[3] + value_two[4]).upper() == "F0EB":
-                    print("[INFO] cash stacked")
-                    if totalValue >= ticketValue:
-                        break
+                currValue = 0
 
-                if (value_two[3] + value_two[4]).upper() == "F0E7":
-                    print("[INFO] stacker full!")
-                    sleep(0.5)
-                    ser.write(cmdRejectNote_alt)
+                # if totalValue > price:
+                #     sleep(0.5)
+                #     ser.write(cmdRejectNote)
 
-            else:
-                if value_two[6] == "EF":
-                    if value_two[7] == "07":
-                        currValue = 100000
-                        tempValue.append(currValue)
-                    elif value_two[7] == "06":
-                        currValue = 50000
-                        tempValue.append(currValue)
-                    elif value_two[7] == "05":
-                        currValue = 20000
-                        tempValue.append(currValue)
-                    elif value_two[7] == "04":
-                        currValue = 10000
-                        tempValue.append(currValue)
-                    elif value_two[7] == "03":
-                        currValue = 5000
-                        tempValue.append(currValue)
-                    elif value_two[7] == "02":
-                        currValue = 2000
-                        tempValue.append(currValue)
-                    elif value_two[7] == "01":
-                        currValue = 1000
-                        tempValue.append(currValue)
-                        # currValue = 2000
-                        # tempValue.append(currValue)
-                    insert_log_money(money=currValue, customerId=customerId)
-                    print('[INFO] cash detect : {} IDR'.format(currValue))
-                    print('[INFO] temp cash -> {}'.format(tempValue))
-                    totalValue += currValue
+            # print("---------------------------")
+            # print("succesfully card purchased!")
+            sleep(0.5)
+            ser.write(cmdDisable)
+            ser.flush()
+            ser.close()
+            response_data = {"moneys": tempValue, "money_changes": moneyChanges}
 
-                    if totalValue > price:
-                        moneyChanges += totalValue - price
-                        totalValue = sum(tempValue)
-                        # sleep(0.5)
-                        # ser.write(cmdRejectNote)
-                        print("[INFO] cash is bigger than card price! [poll 2]")
-                        # if len(tempValue) > 2:
-                        #     tempValue.pop(-1)
-                        #     totalValue = sum(tempValue)
-                        # else:
-                        #     totalValue = tempValue[0]
-                        #     tempValue.pop(-1)
-                        #     totalValue = sum(tempValue)
-                        print('[INFO] total cash : {} IDR'.format(totalValue))
-                        # self.signalMoneyCount.emit(tempValue)
-                    else:
-                        print('[INFO] total cash : {} IDR'.format(totalValue))
-                        # self.signalMoneyCount.emit(tempValue)
-
-                if (value_two[3] + value_two[4]).upper() == "F0ED":
-                    print('[INFO] cash ejected!')
-                    sleep(0.5)
-                    ser.write(cmdRejectNote_alt)
-
-                if (value_two[3] + value_two[4]).upper() == "F0EE":
-                    if (value_two[3] + value_two[4] + value_two[6]).upper() == "F0EEEB":
-                        print("[INFO] credit cash")
-                        print("[INFO] cash stacked")
-                        if totalValue >= price:
-                            break
-                    else:
-                        print("[INFO] credit cash")
-
-                if (value_two[3] + value_two[4]).upper() == "F0CC":
-                    print("[INFO] cash stacking")
-
-                if (value_two[3] + value_two[4]).upper() == "F0EB":
-                    print("[INFO] cash stacked")
-                    if totalValue >= price:
-                        break
-
-                if (value_two[3] + value_two[4]).upper() == "F0E7":
-                    print("[INFO] stacker full!")
-                    sleep(0.5)
-                    ser.write(cmdRejectNote_alt)
-
-            currValue = 0
-
-            # if totalValue > price:
-            #     sleep(0.5)
-            #     ser.write(cmdRejectNote)
-
-        # print("---------------------------")
-        # print("succesfully card purchased!")
-        sleep(0.5)
-        ser.write(cmdDisable)
-        ser.flush()
-        ser.close()
-        response_data = {"moneys": tempValue, "money_changes": moneyChanges}
-
-        # del tempValue[:]
-        # self.signalTransaction.emit('Success')
-        return jsonify({'success': True, "message": "Successfully ticket purchased!", "data": response_data}), 200
-    else:
-        print("[INFO] Bill validator is Close!")
-        return jsonify({'success': False, "message": "Bill validator is Close!"}), 500
+            # del tempValue[:]
+            # self.signalTransaction.emit('Success')
+            return jsonify({'success': True, "message": "Successfully ticket purchased!", "data": response_data}), 200
+        else:
+            print("[INFO] Bill validator is Close!")
+            return jsonify({'success': False, "message": "Bill validator is Close!"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "data": {}, "message": str(e)}), 500
 
 
 @api.route('/get_money', methods=['GET'])
@@ -1076,16 +1082,17 @@ def complaint():
     description = request.get_json().get('description')
     time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     paymentMethod = request.get_json().get('payment_method')
+    insert_pengaduan(customer_id=str(customerId).upper(), vm_id=vmId, name=name, ticket_price=ticketPrice, money_accept=moneyAccept,
+                    money_changes=moneyChanges, payment_method=paymentMethod, answer_status="PENDING", description=description, created_at=time,
+                    updated_at=time)
     result = print_struk_pengaduan(idvendor=idVendor, idproduct=idProduct, customerid=str(customerId).upper(), vmid=vmId, name=name,
                                    ticketprice=ticketPrice, moneyaccept=moneyAccept, moneychanges=moneyChanges, paymentmethod=paymentMethod,
                                    description=description)
-    insert_pengaduan(customer_id=str(customerId).upper(), vm_id=vmId, name=name, ticket_price=ticketPrice, money_accept=moneyAccept,
-                     money_changes=moneyChanges, payment_method=paymentMethod, answer_status="PENDING", description=description, created_at=time,
-                     updated_at=time)
+ 
     if result == 'Ok':
         return jsonify({'success': True, 'message': 'Berhasil cetak tiket pengaduan :)'}), 200
     else:
-        return jsonify({'success': False, 'message': customerId}), 500
+        return jsonify({'success': False, 'message': 'Gagal cetak tiket pengaduan :('}), 500
 
 
 @api.route('/power_off', methods=['GET'])

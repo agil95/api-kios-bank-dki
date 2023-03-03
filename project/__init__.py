@@ -3,7 +3,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 # ======================================
-from datetime import timedelta
 import os
 
 
@@ -32,11 +31,11 @@ def create_app():
     # socket = '?unix_socket=/opt/lampp/var/mysql/mysql.sock'
     # dbname = dbname + socket
 
-    userpass = 'mysql+pymysql://root:root@'
-    basedir = '127.0.0.1'
+    userpass = 'mysql+pymysql://root:@'
+    basedir = 'db'
     dbname = '/kios_pelabuhan'
-    socket = '?unix_socket=/var/run/mysqld/mysqld.sock'
-    dbname = dbname + socket
+    # socket = '?unix_socket=/var/run/mysqld/mysqld.sock'
+    # dbname = dbname + socket
     
     app.config['SQLALCHEMY_DATABASE_URI'] = userpass + basedir + dbname
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

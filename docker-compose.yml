@@ -1,14 +1,19 @@
-version: "2"
+version: "3"
 services:
   app:
     build: ./project
     links:
-      - db
+      - db:database
     ports:
-      - "5000:5000"
+      - 5000:5000
     container_name: flask-app
     restart: unless-stopped
-    image: agil95/kios-engine:1.1.0
+    image: agil95/kios-engine:1.4.0
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - apiconn
 
   db:
     image: mysql:5.7
@@ -18,7 +23,21 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ALLOW_EMPTY_PASSWORD: true
+      # MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: kios_pelabuhan
+      
     volumes:
       - ./db/kios_pelabuhan.sql:/docker-entrypoint-initdb.d/kios_pelabuhan.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      - apiconn
+
+networks:
+  apiconn:
+    driver: bridge
+    name: apiconn
